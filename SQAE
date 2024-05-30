@@ -1,0 +1,155 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define MAX_MEMBERS 10
+#define MAX_RESERVATIONS 10
+#define BUFFER_SIZE 100
+
+typedef struct {
+    int year, month, day, hour, minute;
+} ReservationTime;
+
+typedef struct {
+    char username[BUFFER_SIZE];
+    char password[BUFFER_SIZE];
+    ReservationTime reservations[MAX_RESERVATIONS];
+    int reservation_count;
+} Member;
+
+typedef struct {
+    Member members[MAX_MEMBERS];
+    int member_count;
+    Member* logged_in_member;
+} ReservationSystem;
+
+int parse_reservation_time(const char* input, ReservationTime* time) {
+    return sscanf(input, "%d-%d-%d %d:%d", &time->year, &time->month, &time->day, &time->hour, &time->minute) == 5;
+}
+
+void init_member(Member* member, const char* username, const char* password) {
+    strcpy(member->username, username);
+    strcpy(member->password, password);
+    member->reservation_count = 0;
+}
+
+void init_reservation_system(ReservationSystem* system) {
+    system->member_count = 0;
+    system->logged_in_member = NULL;
+}
+
+void add_member(ReservationSystem* system, const char* username, const char* password) {
+    if (system->member_count < MAX_MEMBERS) {
+        init_member(&system->members[system->member_count++], username, password);
+    }
+}
+
+int login(ReservationSystem* system, const char* username, const char* password) {
+    for (int i = 0; i < system->member_count; ++i) {
+        if (strcmp(system->members[i].username, username) == 0) {
+            if (strcmp(system->members[i].password, password) == 0) {
+                system->logged_in_member = &system->members[i];
+                return 1;
+            } else {
+                printf("Password is wrong.\n");
+                return 0;
+            }
+        }
+    }
+    printf("Username is wrong.\n");
+    return 0;
+}
+
+int make_reservation(Member* member, ReservationTime time, int number_of_tables) {
+    if (member->reservation_count + number_of_tables > MAX_RESERVATIONS) {
+        printf("You can't reserve more than 10 tables.\n");
+        return 0;
+    }
+    if (time.hour < 6 || time.hour >= 11) {
+        printf("Reservations are only allowed between 6 AM to 11 AM.\n");
+        return 0;
+    }
+    for (int i = 0; i < number_of_tables; ++i) {
+        member->reservations[member->reservation_count++] = time;
+    }
+    printf("Successfully reserved %d tables for %s.\n", number_of_tables, member->username);
+    return 1;
+}
+
+int main() {
+    ReservationSystem system;
+    init_reservation_system(&system);
+
+    add_member(&system, "member1", "password1");
+    add_member(&system, "member2", "password2");
+    add_member(&system, "member3", "password3");
+    add_member(&system, "member4", "password4");
+    add_member(&system, "member5", "password5");
+    add_member(&system, "member6", "password6");
+    add_member(&system, "member7", "password7");
+    add_member(&system, "member8", "password8");
+    add_member(&system, "member9", "password9");
+    add_member(&system, "member10", "password10");
+
+    char username[BUFFER_SIZE];
+    char password[BUFFER_SIZE];
+
+    while (1) {
+        printf("Enter username: ");
+        scanf("%s", username);
+        printf("Enter password: ");
+        scanf("%s", password);
+
+        if (login(&system, username, password)) {
+            printf("Login successful.\n");
+            break;
+        }
+
+        char retry[BUFFER_SIZE];
+        printf("Try again? (yes/no): ");
+        scanf("%s", retry);
+        if (strcmp(retry, "no") == 0) {
+            printf("Exiting...\n");
+            return 0;
+        }
+    }
+
+    while (1) {
+        ReservationTime reservation_time;
+        int number_of_tables;
+
+        while (1) {
+            char reservation_time_input[BUFFER_SIZE];
+            printf("Enter reservation time (YYYY-MM-DD HH:MM): ");
+            scanf(" %[^\n]%*c", reservation_time_input);
+
+            if (parse_reservation_time(reservation_time_input, &reservation_time)) {
+                if (reservation_time.hour >= 6 && reservation_time.hour < 11) {
+                    break; // Exit the loop if the time is valid
+                } else {
+                    printf("Reservations are only allowed between 6 AM to 11 AM.\n");
+                }
+            } else {
+                printf("ERROR! Date and time format should be YYYY-MM-DD HH:MM. Please try again.\n");
+            }
+        }
+
+        while (1) {
+            printf("How many tables do you want to reserve (1-10)? ");
+            scanf("%d", &number_of_tables);
+
+            if (number_of_tables >= 1 && number_of_tables <= 10) {
+                break; // Exit the loop if the number is valid
+            } else {
+                printf("Please enter a number between 1 and 10.\n");
+            }
+        }
+
+        if (make_reservation(system.logged_in_member, reservation_time, number_of_tables)) {
+            break;
+        }
+    }
+
+    return 0;
+}
